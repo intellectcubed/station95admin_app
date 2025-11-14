@@ -1,0 +1,60 @@
+### Manual Time Selection
+
+
+- Two dropdown elements are displayed:
+- **Start Time** dropdown containing values from `0000` to `2300` in hourly increments.
+- **End Time** dropdown containing values from `0000` to `2300` in hourly increments.
+- The user may manually select both start and end times.
+- If either start or end time is selected manually, it is expected that the other will be selected as well before executing the command.
+
+
+### Quick Select Time Ranges
+
+
+- A separate control (dropdown or list) labeled **Quick Select** presents predefined time ranges.
+- Selecting a quick range automatically fills both start and end time fields.
+
+
+#### Predefined Ranges
+```
+1800–0600
+0600–1800
+1800–0000
+0000–0600
+0600–1200
+1200–1800
+```
+
+
+### Selection Logic
+
+
+- If the user selects a **Quick Select** range, that value overrides any previous manual selections.
+- If the user starts with manual dropdowns, the system expects both start and end times to be explicitly chosen.
+- Once a Quick Select option is chosen, both start and end times are auto-populated and locked until cleared or changed.
+
+
+### Validation Rules
+
+
+1. If no time values are selected (either via dropdowns or Quick Select), the command cannot be applied.
+2. When manual entry is used, both start and end times must be present.
+3. When Quick Select is used, both start and end times are derived from the selection.
+4. Switching between methods should update or clear the other inputs accordingly.
+
+
+### Example UI Behavior (Pseudocode)
+
+
+```javascript
+function onQuickSelectChange(range) {
+const [start, end] = range.split("–");
+document.getElementById("startTime").value = start;
+document.getElementById("endTime").value = end;
+}
+
+
+function onManualChange() {
+document.getElementById("quickSelect").value = ""; // clear quick select
+}
+```

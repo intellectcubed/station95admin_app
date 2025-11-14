@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Squad Calendar Admin</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <h2>Welcome {{ user }}</h2>
+  <h3>Squad Calendar Administration</h3>
+
+  <div class="date-section">
+    <label for="datePicker">Date:</label>
+    <input type="date" id="datePicker" onchange="loadDate()">
+  </div>
+
+  <div class="grids">
+    <div>
+      <h4>Current</h4>
+      <table id="currentGrid"></table>
+    </div>
+    <div>
+      <h4>Preview</h4>
+      <table id="previewGrid"></table>
+      <button onclick="revert()">Revert</button>
+      <button onclick="apply()">Apply</button>
+    </div>
+  </div>
+
+  <div class="commands">
+    <select id="command">
+      <option value="">Select Command</option>
+      <option value="noCrew">noCrew</option>
+      <option value="obliterateShift">obliterateShift</option>
+      <option value="addShift">addShift</option>
+    </select>
+    <select id="squad">
+      <option value="">Select Squad</option>
+      <option value="34">34</option>
+      <option value="35">35</option>
+      <option value="42">42</option>
+      <option value="43">43</option>
+      <option value="54">54</option>
+    </select>
+    
+    <div class="time-selection">
+      <label for="quickSelect">Quick Select:</label>
+      <select id="quickSelect" onchange="onQuickSelectChange()">
+        <option value="">-- Select Range --</option>
+        <option value="1800-0600">1800–0600</option>
+        <option value="0600-1800">0600–1800</option>
+        <option value="1800-0000">1800–0000</option>
+        <option value="0000-0600">0000–0600</option>
+        <option value="0600-1200">0600–1200</option>
+        <option value="1200-1800">1200–1800</option>
+      </select>
+      
+      <label for="startTime">Start Time:</label>
+      <select id="startTime" onchange="onManualChange()">
+        <option value="">--</option>
+      </select>
+      
+      <label for="endTime">End Time:</label>
+      <select id="endTime" onchange="onManualChange()">
+        <option value="">--</option>
+      </select>
+    </div>
+    
+    <button onclick="preview_button()">Preview Changes</button>
+  </div>
+
+  <div id="output" class="output"></div>
+
+  <div class="backups-section">
+    <h4>Backups</h4>
+    <table id="backupsTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Description</th>
+          <th>Command</th>
+        </tr>
+      </thead>
+      <tbody id="backupsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="restore-section">
+    <label for="backupId">Backup Id:</label>
+    <input type="text" id="backupId" readonly>
+    <button onclick="restore()">Restore</button>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
+

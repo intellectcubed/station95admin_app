@@ -1,0 +1,123 @@
+# Specification: Apply and Preview Command Button Behavior
+
+## Overview
+
+This section defines the behavior of the command execution buttons on the Administration Page of the Squad Calendar web app.
+The page includes three related buttons within the **Command Section**:
+
+* **Preview Changes** (formerly “Apply”)
+* **Revert**
+* **Apply**
+
+These buttons control how command actions (e.g., `noCrew`, `obliterateShift`, `addShift`) are previewed, applied, and reverted.
+
+---
+
+## 1. Preview Changes Button
+
+### Label and Action
+
+* The existing **Apply** button is renamed to **Preview Changes**.
+* When clicked, it calls the JavaScript method `preview_button()`.
+
+### Behavior
+
+* `preview_button()` collects all selected parameters from the Command section:
+
+  * Command (e.g., `noCrew`, `obliterateShift`, `addShift`)
+  * Squad (e.g., `42`, `43`)
+  * Start time and end time (from dropdowns or quick select)
+  * Date (from the date selector at the top of the page)
+* It sends an HTTP GET request to the backend in the following format:
+
+```
+http://localhost:8000/?action=<command>&date=<YYYYMMDD>&shift_start=<start>&shift_end=<end>&squad=<squad>&preview=True
+```
+
+### Expected Response
+
+* The backend returns a grid structure in the same format as `get_schedule_day`.
+* This grid represents a preview of the schedule **after** the command is applied (but not yet committed).
+
+### UI Behavior
+
+* The returned grid should be processed using the same rendering rules as the “Current” grid.
+* The result is displayed in the **Preview** grid section.
+* The Preview grid should replace any previous preview contents.
+
+---
+
+## 2. Revert Button
+
+### Action
+
+* When the **Revert** button is pressed, it resets the Preview grid to reflect the current state of the schedule.
+
+### Behavior
+
+* It calls the backend endpoint:
+
+```
+http://localhost:8000/?action=get_schedule_day&date=<YYYYMMDD>
+```
+
+* The `date` parameter matches the date currently displayed at the top of the page.
+
+### UI Behavior
+
+* The returned grid is rendered in the **Preview** grid section, replacing any previous preview.
+* This allows the user to “revert” the preview back to the actual stored state of the selected day.
+
+---
+
+## 3. Apply Button
+
+### Action
+
+* The **Apply** button performs the final action to commit the changes previewed earlier.
+
+### Behavior
+
+1. It sends a GET request to the backend with `preview=False`:
+
+   ```
+   http://localhost:8000/?action=<command>&date=<YYYYMMDD>&shift_start=<start>&shift_end=<end>&squad=<squad>&preview=False
+   ```
+2. The backend applies the requested changes permanently and returns the updated schedule grid.
+
+### UI Behavior
+
+After a successful Apply:
+
+1. Populate the **Current** grid with the returned grid data.
+2. Clear the **Preview** grid (set it to empty).
+3. Call the backup listing endpoint:
+
+   ```
+   http://localhost:8000/?action=list_backups&date=<YYYYMMDD>
+   ```
+4. Display the list of backups at the bottom of the Admin page.
+
+   * Show up to 20 rows.
+   * Each row includes: `id`, `description`, and `command`.
+   * Truncate additional entries beyond 20.
+
+---
+
+## 4. Summary of Button Logic
+
+| Button              | Backend Action                | preview Parameter | Updates Grid                              | Additional Actions   |
+| ------------------- | ----------------------------- | ----------------- | ----------------------------------------- | -------------------- |
+| **Preview Changes** | `?action=<cmd>&preview=True`  | True              | Populates **Preview**                     | None                 |
+| **Revert**          | `?action=get_schedule_day`    | N/A               | Populates **Preview**                     | None                 |
+| **Apply**           | `?action=<cmd>&preview=False` | False             | Populates **Current**, clears **Preview** | Refresh backups list |
+
+---
+
+## 5. Validation Rules
+
+* The user must select a command, squad, and valid time range before clicking **Preview** or **Apply**.
+* If required parameters are missing, display an alert or validation message.
+* After applying a change, both grids and the backups section should reflect the latest data state.
+
+---

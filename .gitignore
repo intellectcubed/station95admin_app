@@ -1,0 +1,34 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+.env/
+*.env
+
+# VS Code settings
+.vscode/
+
+# macOS files
+.DS_Store
+
+# Supabase credentials and other secrets
+backend/.env
+
+# Docker intermediate files (optional)
+*.log
+*.pid
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+
+# Cache or temp directories
+.cache/
+.pytest_cache/
+
+# Node/npm (if you later add a frontend)
+node_modules/
+
