@@ -1,7 +1,132 @@
-body { font-family: Arial; padding: 20px; background: #f9f9f9; }
-.login-box { background: white; padding: 20px; border-radius: 10px; width: 300px; margin: 50px auto; }
-button { padding: 5px 10px; margin: 5px; }
-.error { color: red; }
-table, td { border: 1px solid #ddd; border-collapse: collapse; padding: 4px; }
-.output { white-space: pre; background: #eee; padding: 10px; margin-top: 10px; }
+body { 
+  font-family: Arial; 
+  padding: 20px; 
+  background: #f9f9f9; 
+}
 
+.login-box { 
+  background: white; 
+  padding: 20px; 
+  border-radius: 10px; 
+  width: 300px; 
+  margin: 50px auto; 
+}
+
+button { 
+  padding: 5px 10px; 
+  margin: 5px; 
+}
+
+.error { 
+  color: red; 
+}
+
+table, td { 
+  border: 1px solid #ddd; 
+  border-collapse: collapse; 
+  padding: 4px; 
+}
+
+.output { 
+  white-space: pre; 
+  background: #eee; 
+  padding: 10px; 
+  margin-top: 10px; 
+}
+
+/* Enhanced table styling for schedule grids and backups table */
+#currentGrid,
+#previewGrid,
+#backupsTable {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#currentGrid th,
+#previewGrid th,
+#backupsTable th {
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+  text-align: left;
+  padding: 5px 10px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  min-width: 120px;
+  height: 18px;
+}
+
+#currentGrid td,
+#previewGrid td,
+#backupsTable td {
+  border: 1px solid #e0e0e0;
+  padding: 8px;
+  font-size: 14px;
+  color: #333;
+  min-width: 120px;
+  vertical-align: top;
+  line-height: 1.4;
+}
+
+#currentGrid tr:has(td:empty):not(:has(td:not(:empty))),
+#previewGrid tr:has(td:empty):not(:has(td:not(:empty))) {
+  display: none;
+}
+
+#currentGrid tr:nth-child(even),
+#previewGrid tr:nth-child(even),
+#backupsTable tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+#currentGrid tr:hover,
+#previewGrid tr:hover,
+#backupsTable tbody tr:hover {
+  background: #f0f4ff;
+  transition: background 0.2s ease;
+}
+
+#currentGrid td:empty,
+#previewGrid td:empty {
+  background: #f9f9f9;
+  padding: 2px;
+  height: 20px;
+}
+
+#currentGrid td:first-child,
+#previewGrid td:first-child {
+  font-weight: 500;
+  color: #555;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  #currentGrid,
+  #previewGrid,
+  #backupsTable {
+    font-size: 12px;
+    display: block;
+    overflow-x: auto;
+  }
+
+  #currentGrid th,
+  #currentGrid td,
+  #previewGrid th,
+  #previewGrid td,
+  #backupsTable th,
+  #backupsTable td {
+    padding: 8px 6px;
+    min-width: 90px;
+  }
+}
