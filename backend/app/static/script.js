@@ -4,6 +4,7 @@ async function loadDate() {
   const res = await fetch(`/api?action=get_schedule_day&date=${date}`);
   const json = await res.json();
   renderGrid("currentGrid", json);
+  renderGrid("previewGrid", json); // Also populate preview table on initialization
   
   // Refresh backups when date changes
   await loadBackups(date);
@@ -67,6 +68,8 @@ function renderGrid(id, json) {
   
   if (!grid) return;
   
+  const isPreviewTable = (id === "previewGrid");
+  
   // Add header row
   const headerRow = document.createElement("tr");
   ["Shift", "Tango", "Squad 1", "Squad 2", "Squad 3"].forEach(header => {
@@ -115,8 +118,56 @@ function renderGrid(id, json) {
       tr.appendChild(td);
     }
     
+    // Add click handler for preview table rows
+    if (isPreviewTable) {
+      tr.style.cursor = "pointer";
+      tr.onclick = function() {
+        // Extract squad assignments from the row
+        const assignments = extractSquadAssignments(row);
+        
+        // Extract shift interval from the shift column
+        const shiftInterval = shift || "";
+        
+        // Highlight selected row
+        document.querySelectorAll("#previewGrid tr").forEach(r => {
+          r.style.backgroundColor = "";
+        });
+        tr.style.backgroundColor = "#e0e0e0";
+        
+        // Call initializeTerritories with the assignments and shift interval
+        if (Object.keys(assignments).length > 0) {
+          initializeTerritories(assignments, shiftInterval);
+        }
+      };
+    }
+    
     table.appendChild(tr);
   }
+}
+
+function extractSquadAssignments(row) {
+  const assignments = {};
+  
+  // Parse squad columns (columns 1-3)
+  for (let j = 1; j <= 3; j++) {
+    if (!row[j] || !row[j].trim()) continue;
+    
+    // Extract squad numbers from the cell content
+    // Format is typically "Squad XX" or just "XX"
+    const squadMatches = row[j].match(/\b(\d{2})\b/g);
+    
+    if (squadMatches && squadMatches.length > 0) {
+      // First squad number is the primary squad
+      const primarySquad = parseInt(squadMatches[0]);
+      
+      // All squad numbers in this cell are territories for this primary squad
+      const territories = squadMatches.map(s => parseInt(s));
+      
+      assignments[primarySquad] = territories;
+    }
+  }
+  
+  return assignments;
 }
 
 async function preview_button() {
@@ -295,3 +346,74 @@ async function restore() {
   }
 }
 
+
+function updatePreviewGridWithTerritories(shiftInterval, assignments) {
+  const previewTable = document.getElementById("previewGrid");
+  const rows = previewTable.querySelectorAll("tr");
+  
+  if (rows.length === 0) {
+    alert("Preview grid is empty. Please generate a preview first.");
+    return;
+  }
+  
+  // Parse shift interval (e.g., "1800 - 0600" or "0600-1800")
+  const intervalMatch = shiftInterval.match(/(\d{4})\s*-\s*(\d{4})/);
+  if (!intervalMatch) {
+    alert("Invalid shift interval format: " + shiftInterval);
+    return;
+  }
+  
+  const startTime = intervalMatch[1];
+  const endTime = intervalMatch[2];
+  
+  // Find the matching row in the preview grid
+  let targetRow = null;
+  for (let i = 1; i < rows.length; i++) { // Skip header row
+    const row = rows[i];
+    const cells = row.querySelectorAll("td");
+    if (cells.length === 0) continue;
+    
+    const shiftCell = cells[0].textContent.trim();
+    
+    // Check if this row matches the shift interval
+    if (shiftCell.includes(startTime) && shiftCell.includes(endTime)) {
+      targetRow = row;
+      break;
+    }
+  }
+  
+  if (!targetRow) {
+    alert(`Could not find shift row for interval: ${shiftInterval}`);
+    return;
+  }
+  
+  // Sort squads by key
+  const sortedSquads = Object.keys(assignments).sort((a, b) => parseInt(a) - parseInt(b));
+  
+  // Update the squad columns (columns 2, 3, 4 - indices 2, 3, 4)
+  const cells = targetRow.querySelectorAll("td");
+  
+  for (let i = 0; i < 3 && i < sortedSquads.length; i++) {
+    const squad = sortedSquads[i];
+    const territories = assignments[squad];
+    
+    // Format: "XX\n[XX, YY, ZZ]"
+    const squadText = squad;
+    const territoriesText = `[${territories.join(", ")}]`;
+    const cellContent = `${squadText}<br>${territoriesText}`;
+    
+    // Update cell (index is i + 2 because first two columns are Shift and Tango)
+    if (cells[i + 2]) {
+      cells[i + 2].innerHTML = cellContent;
+    }
+  }
+  
+  // Clear any remaining squad columns if there are fewer squads than columns
+  for (let i = sortedSquads.length; i < 3; i++) {
+    if (cells[i + 2]) {
+      cells[i + 2].innerHTML = "";
+    }
+  }
+  
+  document.getElementById("output").textContent = `Preview updated for shift ${shiftInterval}`;
+}

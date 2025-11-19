@@ -4,6 +4,8 @@
   <title>Squad Calendar Admin</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/command_style.css">
+  <link rel="stylesheet" href="/static/territories.css">
+
 </head>
 <body>
   <h2>Welcome {{ user }}</h2>
@@ -27,7 +29,35 @@
     </div>
   </div>
 
+  <!-- Territory Section -->
+
+  <div class="territory-container">
+    <h3>Territory Assignments</h3>
+    
+    <div id="squadSections"></div>
+    
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-box primary"></div>
+        <span>Primary Territory (own squad)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box secondary"></div>
+        <span>Additional Territory</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button onclick="resetAssignments()">Reset to Default</button>
+      <button onclick="getAssignments()">Get Current Assignments</button>
+      <button onclick="previewTerritories()">Preview Territories</button>
+    </div>
+  </div>
+
+  <!-- Territory Section-->
+
   <div class="commands">
+    <h2>Commands</h2>
     <select id="command">
       <option value="">Select Command</option>
       <option value="noCrew">noCrew</option>
@@ -92,6 +122,7 @@
   </div>
 
   <script src="/static/script.js"></script>
+  <script src="/static/territories.js"></script>
 </body>
 </html>
 
