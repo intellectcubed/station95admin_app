@@ -1,0 +1,32 @@
+# Upon start up, the javascript will call get_schedule_day.  The results are shown below.  Previously, it used to return a csv representing the day schedule (multiple shifts for a given day).  The response has changed so we need to change the javascript to handle the json structure that is now returned.
+
+## Response from get_schedule_day:
+
+{"success":true,"action":"get_schedule_day","date":"20260317","day_schedule":"{\"day\": \"Tuesday 2026-03-17\", \"shifts\": [{\"name\": \"Night Shift\", \"start_time\": \"18:00\", \"end_time\": \"06:00\", \"segments\": [{\"start_time\": \"18:00\", \"end_time\": \"06:00\", \"squads\": [{\"id\": 43, \"territories\": [34, 43], \"active\": true}, {\"id\": 54, \"territories\": [35, 42, 54], \"active\": true}]}], \"tango\": 43}]}"}
+
+## handling the response
+- Save in a global variable that is the current_schedule_day, and working_schedule_day.  The value in the response for day_schedule goes in these variables.  
+- current_schedule_day will be used to render "currentGrid".  You would use this current_schedule_day to populate currentGrid, and also if "Revert" button is pressed, populate previewGrid with values from current_schedule_day.
+
+- working_schedule_day will reflect the state of previewGrid.  Any changes that are applied will be applied to working_schedule_day.   
+
+
+## Rendering the grids.
+- Rendering the grids will consist of reading current_schedule_day for currentGrid and working_schedule_day for previewGrid.  CurrentGrid and previewGrid will have the same columns.  They will show the details of the shifts as explained below: 
+
+
+col 0 - shift start, end formatted as: "HHMM - HHMM"
+col 1 - tango for the shift
+col 2 - First squad entry formatted as squad id, <br> territories surrounded with brackets.  if the squad is not active, or territories is blank, put [No Crew] instead of terrtiories and make it red, otherwise it is black.  
+col 3 - Second squad entry (formatted as above)
+col 4 - Third squad entry (formatted as above)
+
+If a shift segment has no squads assigned - write in bold red: "Out of Service"
+
+
+### Example Rendered Table
+
+| Shift     | Tango | Squad 1          | Squad 2       | Squad 3 |
+| --------- | ----- | ---------------- | ------------- | ------- |
+| 1800–0000 | 43    | 42<br>[No Crew]  | 43<br>[All]   |         |
+| 0000–0600 | 42    | 42<br>[35,42,54] | 43<br>[34,43] |         |
