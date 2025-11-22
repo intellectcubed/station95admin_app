@@ -58,3 +58,29 @@ async def api_proxy(request: Request):
         return JSONResponse(res.json())
     return HTMLResponse(res.text)
 
+
+@app.post("/calendar/day/{date}/preview")
+async def preview_proxy(date: str, request: Request):
+    """Proxy preview requests to the calendar service."""
+    body = await request.json()
+    async with httpx.AsyncClient() as client:
+        res = await client.post(
+            f"{CALENDAR_URL}/calendar/day/{date}/preview",
+            json=body,
+            headers={"Content-Type": "application/json"}
+        )
+    return JSONResponse(res.json())
+
+
+@app.post("/calendar/day/{date}/apply")
+async def apply_proxy(date: str, request: Request):
+    """Proxy apply requests to the calendar service."""
+    body = await request.json()
+    async with httpx.AsyncClient() as client:
+        res = await client.post(
+            f"{CALENDAR_URL}/calendar/day/{date}/apply",
+            json=body,
+            headers={"Content-Type": "application/json"}
+        )
+    return JSONResponse(res.json())
+

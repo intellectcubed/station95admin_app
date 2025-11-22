@@ -18,14 +18,15 @@
 
   <div class="grids">
     <div>
-      <h4>Current</h4>
       <table id="currentGrid"></table>
     </div>
     <div>
-      <h4>Preview</h4>
       <table id="previewGrid"></table>
-      <button onclick="revert()">Revert</button>
-      <button onclick="apply()">Apply</button>
+      <div style="text-align: center; margin-top: 10px;">
+        <button onclick="revert()">Revert</button>
+        <button class="red-button" onclick="apply()">Apply</button>
+        <button onclick="showState()">Show State</button>
+      </div>
     </div>
   </div>
 

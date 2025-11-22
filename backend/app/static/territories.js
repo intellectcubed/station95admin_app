@@ -26,12 +26,28 @@
       if (typeof input === 'object' && !Array.isArray(input)) {
         assignments = {};
         for (const [squad, territories] of Object.entries(input)) {
-          assignments[parseInt(squad)] = dedupAndSort(territories.map(t => parseInt(t)));
+          const squadNum = parseInt(squad);
+          let territoryNums = territories.map(t => parseInt(t));
+
+          // Ensure squad's own territory is first (primary), then sort the rest
+          const ownTerritoryIndex = territoryNums.indexOf(squadNum);
+          if (ownTerritoryIndex > -1) {
+            // Remove own territory from current position
+            territoryNums.splice(ownTerritoryIndex, 1);
+            // Add own territory at the beginning
+            territoryNums.unshift(squadNum);
+          }
+
+          // Deduplicate and sort the remaining (non-primary) territories
+          const primaryTerritory = territoryNums[0];
+          const otherTerritories = [...new Set(territoryNums.slice(1))].sort((a, b) => a - b);
+
+          assignments[squadNum] = [primaryTerritory, ...otherTerritories];
         }
-        
+
         // Store original assignments for reset functionality
         originalAssignments = JSON.parse(JSON.stringify(assignments));
-        
+
         // Store shift interval if provided
         if (interval) {
           shiftInterval = interval;
@@ -69,7 +85,7 @@
         pillsContainer.addEventListener('dragleave', handleDragLeave);
 
         assignments[squad].forEach((territory, index) => {
-          const pill = createTerritoryPill(territory, squad, index === 0);
+          const pill = createTerritoryPill(territory, squad, territory === parseInt(squad));
           pillsContainer.appendChild(pill);
         });
 
@@ -142,19 +158,8 @@
     }
 
     function removeTerritory(squad, territory) {
-      // Can't remove primary territory
-      if (assignments[squad][0] === territory) {
-        alert('Cannot remove primary territory');
-        return;
-      }
-
-      assignments[squad] = assignments[squad].filter(t => t !== territory);
-      renderAssignments();
-    }
-
-    function removeTerritory(squad, territory) {
-      // Can't remove primary territory
-      if (assignments[squad][0] === territory) {
+      // Can't remove primary territory (squad's own territory)
+      if (territory === parseInt(squad)) {
         alert('Cannot remove primary territory');
         return;
       }

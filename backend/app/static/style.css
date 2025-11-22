@@ -12,26 +12,78 @@ body {
   margin: 50px auto; 
 }
 
-button { 
-  padding: 5px 10px; 
-  margin: 5px; 
+button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin: 5px;
+  transition: background 0.2s ease;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+button:active {
+  background: #1e40af;
+}
+
+button.red-button {
+  background: #dc2626;
+}
+
+button.red-button:hover {
+  background: #b91c1c;
+}
+
+button.red-button:active {
+  background: #991b1b;
 }
 
 .error { 
   color: red; 
 }
 
-table, td { 
-  border: 1px solid #ddd; 
-  border-collapse: collapse; 
-  padding: 4px; 
+table, td {
+  border: 1px solid #ddd;
+  border-collapse: collapse;
+  padding: 4px;
 }
 
-.output { 
-  white-space: pre; 
-  background: #eee; 
-  padding: 10px; 
-  margin-top: 10px; 
+.grids > div {
+  margin-bottom: 10px;
+}
+
+.output {
+  white-space: pre;
+  background: #eee;
+  padding: 10px;
+  margin-top: 10px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Loading spinner */
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #2563eb;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Enhanced table styling for schedule grids and backups table */

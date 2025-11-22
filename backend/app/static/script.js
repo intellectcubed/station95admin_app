@@ -1,13 +1,45 @@
+// Global state variables for schedule management
+let current_schedule_day = null;
+let working_schedule_day = null;
+let commandHistory = [];
+
+// Helper functions for loading state
+function showLoading(message) {
+  const output = document.getElementById("output");
+  output.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
+}
+
+function showMessage(message) {
+  const output = document.getElementById("output");
+  output.innerHTML = `<span>${message}</span>`;
+}
+
 async function loadDate() {
   const datePicker = document.getElementById("datePicker");
   const date = datePicker.value.replace(/-/g, '');
+
+  showLoading("Loading schedule...");
+
   const res = await fetch(`/api?action=get_schedule_day&date=${date}`);
   const json = await res.json();
-  renderGrid("currentGrid", json);
-  renderGrid("previewGrid", json); // Also populate preview table on initialization
+
+  // Parse the day_schedule JSON string from the response
+  if (json.day_schedule) {
+    const scheduleData = JSON.parse(json.day_schedule);
+    current_schedule_day = scheduleData;
+    working_schedule_day = JSON.parse(JSON.stringify(scheduleData)); // Deep copy
+  }
   
+  // Clear command history when loading a new date
+  commandHistory = [];
+
+  renderGrid("currentGrid", current_schedule_day);
+  renderGrid("previewGrid", working_schedule_day);
+
   // Refresh backups when date changes
   await loadBackups(date);
+
+  showMessage("Schedule loaded successfully");
 }
 
 async function initDate() {
@@ -59,17 +91,23 @@ window.onload = async function() {
   await initDate();
 };
 
-function renderGrid(id, json) {
+function renderGrid(id, scheduleData) {
   const table = document.getElementById(id);
   table.innerHTML = "";
-  
-  // Handle both 'grid' and 'modified_grid' fields
-  const grid = json.grid || json.modified_grid;
-  
-  if (!grid) return;
-  
+
+  if (!scheduleData || !scheduleData.shifts) return;
+
   const isPreviewTable = (id === "previewGrid");
-  
+
+  // Add title row (Current or Preview)
+  const titleRow = document.createElement("tr");
+  const titleCell = document.createElement("th");
+  titleCell.colSpan = 5;
+  titleCell.textContent = isPreviewTable ? "Preview" : "Current";
+  titleCell.style.textAlign = "center";
+  titleRow.appendChild(titleCell);
+  table.appendChild(titleRow);
+
   // Add header row
   const headerRow = document.createElement("tr");
   ["Shift", "Tango", "Squad 1", "Squad 2", "Squad 3"].forEach(header => {
@@ -78,71 +116,87 @@ function renderGrid(id, json) {
     headerRow.appendChild(th);
   });
   table.appendChild(headerRow);
-  
-  // Render data rows (skip first row - grid[0])
-  for (let i = 1; i < grid.length; i++) {
-    const row = grid[i];
-    const tr = document.createElement("tr");
-    
-    // Check if row is empty
-    if (row.every(cell => !cell || !cell.trim())) {
-      for (let j = 0; j < 5; j++) {
-        tr.appendChild(document.createElement("td"));
-      }
-      table.appendChild(tr);
-      continue;
-    }
-    
-    // Parse shift info (column 0)
-    const shiftInfo = row[0] ? row[0].split("\n") : ["", ""];
-    const shift = shiftInfo[0] || "";
-    const tangoMatch = shiftInfo[1] ? shiftInfo[1].match(/Tango:\s*(\d+)/) : null;
-    const tango = tangoMatch ? tangoMatch[1] : "";
-    
-    // Add Shift column
-    const shiftTd = document.createElement("td");
-    shiftTd.textContent = shift;
-    tr.appendChild(shiftTd);
-    
-    // Add Tango column
-    const tangoTd = document.createElement("td");
-    tangoTd.textContent = tango;
-    tr.appendChild(tangoTd);
-    
-    // Add Squad columns (columns 1-3)
-    for (let j = 1; j <= 3; j++) {
-      const td = document.createElement("td");
-      if (row[j]) {
-        td.innerHTML = row[j].split("\n").join("<br>");
-      }
-      tr.appendChild(td);
-    }
-    
-    // Add click handler for preview table rows
-    if (isPreviewTable) {
-      tr.style.cursor = "pointer";
-      tr.onclick = function() {
-        // Extract squad assignments from the row
-        const assignments = extractSquadAssignments(row);
-        
-        // Extract shift interval from the shift column
-        const shiftInterval = shift || "";
-        
-        // Highlight selected row
-        document.querySelectorAll("#previewGrid tr").forEach(r => {
-          r.style.backgroundColor = "";
-        });
-        tr.style.backgroundColor = "#e0e0e0";
-        
-        // Call initializeTerritories with the assignments and shift interval
-        if (Object.keys(assignments).length > 0) {
-          initializeTerritories(assignments, shiftInterval);
+
+  // Render data rows from shifts
+  scheduleData.shifts.forEach(shift => {
+    shift.segments.forEach(segment => {
+      const tr = document.createElement("tr");
+
+      // Format times (remove colons: "18:00" -> "1800")
+      const startTime = segment.start_time.replace(":", "");
+      const endTime = segment.end_time.replace(":", "");
+
+      // Add Shift column (HHMM - HHMM)
+      const shiftTd = document.createElement("td");
+      shiftTd.textContent = `${startTime} - ${endTime}`;
+      tr.appendChild(shiftTd);
+
+      // Add Tango column
+      const tangoTd = document.createElement("td");
+      tangoTd.textContent = shift.tango || "";
+      tr.appendChild(tangoTd);
+
+      // Check if segment has squads
+      if (!segment.squads || segment.squads.length === 0) {
+        // No squads - show "Out of Service"
+        const td = document.createElement("td");
+        td.colSpan = 3;
+        td.innerHTML = "<strong style='color: red;'>Out of Service</strong>";
+        tr.appendChild(td);
+      } else {
+        // Add Squad columns (up to 3 squads)
+        for (let i = 0; i < 3; i++) {
+          const td = document.createElement("td");
+
+          if (i < segment.squads.length) {
+            const squad = segment.squads[i];
+            const squadId = squad.id;
+
+            // Check if squad is inactive or has no territories
+            if (!squad.active || !squad.territories || squad.territories.length === 0) {
+              td.innerHTML = `${squadId}<br><span style='color: red;'>[No Crew]</span>`;
+            } else {
+              const territories = squad.territories.join(", ");
+              td.innerHTML = `${squadId}<br>[${territories}]`;
+            }
+          }
+
+          tr.appendChild(td);
         }
-      };
-    }
-    
-    table.appendChild(tr);
-  }
+      }
+
+      // Add click handler for preview table rows
+      if (isPreviewTable) {
+        tr.style.cursor = "pointer";
+        tr.onclick = function() {
+          // Extract squad assignments from the segment
+          const assignments = {};
+          if (segment.squads) {
+            segment.squads.forEach(squad => {
+              if (squad.active && squad.territories && squad.territories.length > 0) {
+                assignments[squad.id] = squad.territories;
+              }
+            });
+          }
+
+          const shiftInterval = `${startTime} - ${endTime}`;
+
+          // Highlight selected row
+          document.querySelectorAll("#previewGrid tr").forEach(r => {
+            r.style.backgroundColor = "";
+          });
+          tr.style.backgroundColor = "#e0e0e0";
+
+          // Call initializeTerritories with the assignments and shift interval
+          if (Object.keys(assignments).length > 0) {
+            initializeTerritories(assignments, shiftInterval);
+          }
+        };
+      }
+
+      table.appendChild(tr);
+    });
+  });
 }
 
 function extractSquadAssignments(row) {
@@ -177,91 +231,176 @@ async function preview_button() {
   const end = document.getElementById("endTime").value;
   const datePicker = document.getElementById("datePicker");
   const date = datePicker.value.replace(/-/g, '');
-  
+
   // Validation
   if (!cmd) {
-    document.getElementById("output").textContent = "Error: Command must be selected";
+    showMessage("Error: Command must be selected");
     return;
   }
   if (!squad) {
-    document.getElementById("output").textContent = "Error: Squad must be selected";
+    showMessage("Error: Squad must be selected");
     return;
   }
   if (!start || !end) {
-    document.getElementById("output").textContent = "Error: Both start and end times must be selected";
+    showMessage("Error: Both start and end times must be selected");
     return;
   }
-  
+  if (!working_schedule_day) {
+    showMessage("Error: No schedule loaded to preview");
+    return;
+  }
+
   try {
-    const url = `/api?action=${cmd}&date=${date}&shift_start=${start}&shift_end=${end}&squad=${squad}&preview=True`;
+    showLoading(`Generating preview for ${cmd} on squad ${squad}...`);
+
+    // Build the POST payload
+    const payload = {
+      action: cmd,
+      date: date,
+      shift_start: start,
+      shift_end: end,
+      squad: parseInt(squad),
+      day_schedule: JSON.stringify(working_schedule_day)
+    };
+
+    const url = `/calendar/day/${date}/preview`;
     console.log("Preview URL:", url);
-    const res = await fetch(url);
+    console.log("Preview payload:", payload);
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
     const text = await res.text();
     console.log("Preview response:", text);
-    
+
     let json;
     try {
       json = JSON.parse(text);
     } catch (e) {
-      document.getElementById("output").textContent = "Error: Invalid JSON response - " + text;
+      showMessage("Error: Invalid JSON response - " + text);
       return;
     }
-    
+
     console.log("Preview JSON:", json);
-    renderGrid("previewGrid", json);
-    document.getElementById("output").textContent = "Preview generated";
+
+    // Parse the modified_grid or day_schedule JSON string and update working_schedule_day
+    const scheduleSource = json.modified_grid || json.day_schedule;
+    if (scheduleSource) {
+      const scheduleData = JSON.parse(scheduleSource);
+      working_schedule_day = scheduleData;
+      renderGrid("previewGrid", working_schedule_day);
+      
+      // Track the command in history
+      const commandString = `${cmd}[${squad}] ${start} - ${end}`;
+      commandHistory.push(commandString);
+      console.log("Command history:", commandHistory);
+      
+      showMessage("Preview generated successfully");
+    } else {
+      showMessage("Error: No schedule data in response");
+    }
   } catch (error) {
     console.error("Preview error:", error);
-    document.getElementById("output").textContent = "Error: " + error.message;
+    showMessage("Error: " + error.message);
   }
 }
 
 async function revert() {
-  const datePicker = document.getElementById("datePicker");
-  const date = datePicker.value.replace(/-/g, '');
-  
-  const res = await fetch(`/api?action=get_schedule_day&date=${date}`);
-  const json = await res.json();
-  renderGrid("previewGrid", json);
-  document.getElementById("output").textContent = "Preview reverted to current state";
+  // Restore working_schedule_day from current_schedule_day
+  if (current_schedule_day) {
+    working_schedule_day = JSON.parse(JSON.stringify(current_schedule_day)); // Deep copy
+    renderGrid("previewGrid", working_schedule_day);
+    
+    // Clear command history when reverting
+    commandHistory = [];
+    console.log("Command history cleared");
+    
+    showMessage("Preview reverted to current state");
+  } else {
+    showMessage("Error: No current schedule loaded");
+  }
+}
+
+function showState() {
+  if (working_schedule_day) {
+    // Create JSON string with pretty formatting
+    const jsonString = JSON.stringify(working_schedule_day, null, 2);
+
+    // Create a blob with the JSON data
+    const blob = new Blob([jsonString], { type: 'application/json' });
+
+    // Create a temporary download link
+    const downloadLink = document.createElement('a');
+    downloadLink.href = URL.createObjectURL(blob);
+    downloadLink.download = 'PreviewState.json';
+
+    // Trigger the download
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+
+    // Clean up
+    document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(downloadLink.href);
+
+    showMessage("Preview state downloaded as PreviewState.json");
+  } else {
+    showMessage("No working schedule data loaded");
+  }
 }
 
 async function apply() {
-  const cmd = document.getElementById("command").value;
-  const squad = document.getElementById("squad").value;
-  const start = document.getElementById("startTime").value;
-  const end = document.getElementById("endTime").value;
+  showLoading(`Applying changes...`);
+
   const datePicker = document.getElementById("datePicker");
   const date = datePicker.value.replace(/-/g, '');
-  
-  // Validation
-  if (!cmd) {
-    document.getElementById("output").textContent = "Error: Command must be selected";
-    return;
+
+  // Build the POST payload with DaySchedule as a JSON string and commands
+  const commandsString = commandHistory.join("; ");
+  const payload = {
+    DaySchedule: JSON.stringify(working_schedule_day),
+    commands: commandsString
+  };
+
+  const url = `/calendar/day/${date}/apply`;
+  console.log("Apply URL:", url);
+  console.log("Apply payload:", payload);
+  console.log("Commands being applied:", commandsString);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const json = await res.json();
+    console.log("Apply response:", json);
+
+    // Check if the response indicates success
+    if (json.success) {
+      // Format date for display (YYYYMMDD -> YYYY-MM-DD)
+      const formattedDate = json.date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+      showMessage(`Date updated: ${formattedDate} ChangeId created: ${json.changeId}`);
+
+      // Clear command history after successful apply
+      commandHistory = [];
+
+      // Reload the schedule to get the updated data
+      await loadDate();
+    } else {
+      showMessage("Error: Apply operation failed");
+    }
+  } catch (error) {
+    console.error("Apply error:", error);
+    showMessage("Error: " + error.message);
   }
-  if (!squad) {
-    document.getElementById("output").textContent = "Error: Squad must be selected";
-    return;
-  }
-  if (!start || !end) {
-    document.getElementById("output").textContent = "Error: Both start and end times must be selected";
-    return;
-  }
-  
-  const url = `/api?action=${cmd}&date=${date}&shift_start=${start}&shift_end=${end}&squad=${squad}&preview=False`;
-  const res = await fetch(url);
-  const json = await res.json();
-  
-  // Update Current grid
-  renderGrid("currentGrid", json);
-  
-  // Clear Preview grid
-  document.getElementById("previewGrid").innerHTML = "";
-  
-  // Refresh backups list
-  await loadBackups(date);
-  
-  document.getElementById("output").textContent = "Changes applied successfully";
 }
 
 async function loadBackups(date) {
@@ -317,103 +456,88 @@ async function restore() {
   const backupId = document.getElementById("backupId").value;
   const datePicker = document.getElementById("datePicker");
   const date = datePicker.value.replace(/-/g, '');
-  
+
   if (!backupId) {
-    document.getElementById("output").textContent = "Error: Please select a backup to restore";
+    showMessage("Error: Please select a backup to restore");
     return;
   }
-  
+
   try {
+    showLoading(`Restoring backup ${backupId}...`);
+
     const url = `/api?action=rollback&date=${date}&change_id=${backupId}`;
     console.log("Restore URL:", url);
     const res = await fetch(url);
     const json = await res.json();
-    
+
     console.log("Restore response:", json);
-    document.getElementById("output").textContent = "Backup restored successfully";
-    
+
     // Refresh the page data
     await loadDate();
-    
+
     // Clear the backup ID selection
     document.getElementById("backupId").value = "";
     document.querySelectorAll("#backupsBody tr").forEach(row => {
       row.style.backgroundColor = "";
     });
+
+    showMessage("Backup restored successfully");
   } catch (error) {
     console.error("Restore error:", error);
-    document.getElementById("output").textContent = "Error: " + error.message;
+    showMessage("Error: " + error.message);
   }
 }
 
 
 function updatePreviewGridWithTerritories(shiftInterval, assignments) {
-  const previewTable = document.getElementById("previewGrid");
-  const rows = previewTable.querySelectorAll("tr");
-  
-  if (rows.length === 0) {
-    alert("Preview grid is empty. Please generate a preview first.");
+  if (!working_schedule_day || !working_schedule_day.shifts) {
+    alert("No schedule data loaded.");
     return;
   }
-  
+
   // Parse shift interval (e.g., "1800 - 0600" or "0600-1800")
   const intervalMatch = shiftInterval.match(/(\d{4})\s*-\s*(\d{4})/);
   if (!intervalMatch) {
     alert("Invalid shift interval format: " + shiftInterval);
     return;
   }
-  
+
   const startTime = intervalMatch[1];
   const endTime = intervalMatch[2];
-  
-  // Find the matching row in the preview grid
-  let targetRow = null;
-  for (let i = 1; i < rows.length; i++) { // Skip header row
-    const row = rows[i];
-    const cells = row.querySelectorAll("td");
-    if (cells.length === 0) continue;
-    
-    const shiftCell = cells[0].textContent.trim();
-    
-    // Check if this row matches the shift interval
-    if (shiftCell.includes(startTime) && shiftCell.includes(endTime)) {
-      targetRow = row;
-      break;
+
+  // Format times with colon for comparison (1800 -> 18:00)
+  const formattedStart = startTime.slice(0, 2) + ":" + startTime.slice(2);
+  const formattedEnd = endTime.slice(0, 2) + ":" + endTime.slice(2);
+
+  // Find the matching segment in working_schedule_day
+  let foundSegment = null;
+  for (const shift of working_schedule_day.shifts) {
+    for (const segment of shift.segments) {
+      if (segment.start_time === formattedStart && segment.end_time === formattedEnd) {
+        foundSegment = segment;
+        break;
+      }
     }
+    if (foundSegment) break;
   }
-  
-  if (!targetRow) {
-    alert(`Could not find shift row for interval: ${shiftInterval}`);
+
+  if (!foundSegment) {
+    alert(`Could not find shift segment for interval: ${shiftInterval}`);
     return;
   }
-  
-  // Sort squads by key
+
+  // Update the segment's squads with new territory assignments
   const sortedSquads = Object.keys(assignments).sort((a, b) => parseInt(a) - parseInt(b));
-  
-  // Update the squad columns (columns 2, 3, 4 - indices 2, 3, 4)
-  const cells = targetRow.querySelectorAll("td");
-  
-  for (let i = 0; i < 3 && i < sortedSquads.length; i++) {
-    const squad = sortedSquads[i];
-    const territories = assignments[squad];
-    
-    // Format: "XX\n[XX, YY, ZZ]"
-    const squadText = squad;
-    const territoriesText = `[${territories.join(", ")}]`;
-    const cellContent = `${squadText}<br>${territoriesText}`;
-    
-    // Update cell (index is i + 2 because first two columns are Shift and Tango)
-    if (cells[i + 2]) {
-      cells[i + 2].innerHTML = cellContent;
-    }
-  }
-  
-  // Clear any remaining squad columns if there are fewer squads than columns
-  for (let i = sortedSquads.length; i < 3; i++) {
-    if (cells[i + 2]) {
-      cells[i + 2].innerHTML = "";
-    }
-  }
-  
+  foundSegment.squads = sortedSquads.map(squadId => {
+    return {
+      id: parseInt(squadId),
+      territories: assignments[squadId],
+      active: true
+    };
+  });
+
+  // Re-render the preview grid with updated data
+  renderGrid("previewGrid", working_schedule_day);
+
   document.getElementById("output").textContent = `Preview updated for shift ${shiftInterval}`;
 }
