@@ -18,11 +18,11 @@ echo ""
 echo "Updating Lambda functions..."
 echo "----------------------------------------------"
 
-if [ ! -f "lambda/lambda-package.zip" ]; then
+if [ ! -f "backend/lambda/lambda-package.zip" ]; then
     echo "Building Lambda package..."
-    cd lambda
+    cd backend/lambda
     ./build.sh
-    cd ..
+    cd ../..
 fi
 
 FUNCTIONS=("login" "calendar" "api-proxy")
@@ -31,7 +31,7 @@ for func in "${FUNCTIONS[@]}"; do
     echo "Updating $FUNCTION_NAME..."
     aws lambda update-function-code \
       --function-name "$FUNCTION_NAME" \
-      --zip-file fileb://lambda/lambda-package.zip \
+      --zip-file fileb://backend/lambda/lambda-package.zip \
       --region ${REGION} \
       > /dev/null
 done

@@ -25,11 +25,11 @@ if ! aws sts get-caller-identity &> /dev/null; then
 fi
 
 # Check if lambda package exists
-if [ ! -f "lambda/lambda-package.zip" ]; then
+if [ ! -f "backend/lambda/lambda-package.zip" ]; then
     echo -e "${YELLOW}Lambda package not found. Building...${NC}"
-    cd lambda
+    cd backend/lambda
     ./build.sh
-    cd ..
+    cd ../..
 fi
 
 echo ""
@@ -38,7 +38,7 @@ echo "----------------------------------------------"
 
 aws cloudformation create-stack \
   --stack-name "station95-lambda-${ENVIRONMENT}" \
-  --template-body file://cloudformation/lambda-functions.yaml \
+  --template-body file://backend/cloudformation/lambda-functions.yaml \
   --parameters \
     ParameterKey=Environment,ParameterValue=${ENVIRONMENT} \
     ParameterKey=SupabaseUrl,ParameterValue=${SUPABASE_URL} \
@@ -65,7 +65,7 @@ for func in "${FUNCTIONS[@]}"; do
     echo "Updating $FUNCTION_NAME..."
     aws lambda update-function-code \
       --function-name "$FUNCTION_NAME" \
-      --zip-file fileb://lambda/lambda-package.zip \
+      --zip-file fileb://backend/lambda/lambda-package.zip \
       --region ${REGION} \
       > /dev/null
 done
@@ -78,7 +78,7 @@ echo "----------------------------------------------"
 
 aws cloudformation create-stack \
   --stack-name "station95-api-${ENVIRONMENT}" \
-  --template-body file://cloudformation/api-gateway.yaml \
+  --template-body file://backend/cloudformation/api-gateway.yaml \
   --parameters \
     ParameterKey=Environment,ParameterValue=${ENVIRONMENT} \
     ParameterKey=LambdaStackName,ParameterValue="station95-lambda-${ENVIRONMENT}" \
@@ -123,5 +123,5 @@ echo "  3. Your site will be at:"
 echo "     https://YOUR_USERNAME.github.io/station95admin_app/"
 echo ""
 echo "To update Lambda code:"
-echo "  cd lambda && ./build.sh && ./deploy.sh $ENVIRONMENT"
+echo "  cd backend/lambda && ./build.sh && cd ../.. && ./update.sh $ENVIRONMENT"
 echo ""
