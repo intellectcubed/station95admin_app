@@ -15,9 +15,18 @@
     <p id="error" class="error" style="display: none;"></p>
   </div>
 
+  <!-- Configuration -->
+  <script src="js/config.js"></script>
+
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
-    // API Gateway endpoint - will be set via environment/config
-    const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080';
+    // Initialize Supabase client
+    const supabase = window.supabase.createClient(
+      window.APP_CONFIG.SUPABASE_URL,
+      window.APP_CONFIG.SUPABASE_ANON_KEY
+    );
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -27,26 +36,29 @@
       const errorEl = document.getElementById('error');
 
       try {
-        const response = await fetch(`${API_BASE_URL}/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email, password }),
+        // Authenticate directly with Supabase
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
         });
 
-        const data = await response.json();
-
-        if (response.ok) {
-          // Store user info in localStorage
-          localStorage.setItem('user', JSON.stringify(data.user));
-          // Redirect to admin page
-          window.location.href = 'admin.html';
-        } else {
-          errorEl.textContent = data.detail || 'Login failed';
+        if (error) {
+          errorEl.textContent = error.message || 'Login failed';
           errorEl.style.display = 'block';
+          return;
         }
+
+        // Store user info and session
+        localStorage.setItem('user', JSON.stringify({
+          email: data.user.email,
+          id: data.user.id,
+        }));
+        localStorage.setItem('supabase_session', JSON.stringify(data.session));
+
+        // Redirect to admin page
+        window.location.href = 'admin.html';
       } catch (error) {
+        console.error('Login error:', error);
         errorEl.textContent = 'Network error. Please try again.';
         errorEl.style.display = 'block';
       }
@@ -59,6 +71,14 @@
       document.getElementById('error').textContent = errorParam;
       document.getElementById('error').style.display = 'block';
     }
+
+    // Check if already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // Already logged in, redirect to admin
+        window.location.href = 'admin.html';
+      }
+    });
   </script>
 </body>
 </html>

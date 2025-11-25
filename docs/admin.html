@@ -8,8 +8,13 @@
 
 </head>
 <body>
-  <h2>Welcome <span id="userEmail">User</span></h2>
-  <h3>Squad Calendar Administration</h3>
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h2>Welcome <span id="userEmail">User</span></h2>
+      <h3>Squad Calendar Administration</h3>
+    </div>
+    <button onclick="logout()" style="height: 40px;">Logout</button>
+  </div>
 
   <div class="date-section">
     <label for="datePicker">Date:</label>
@@ -124,19 +129,45 @@
     </table>
   </div>
 
-  <script>
-    // Check if user is logged in
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
-    if (!user) {
-      // Redirect to login if not authenticated
-      window.location.href = 'index.html';
-    } else {
-      // Display user email
-      document.getElementById('userEmail').textContent = user.email || 'User';
-    }
+  <!-- Configuration -->
+  <script src="js/config.js"></script>
 
-    // Set API base URL for script.js to use
-    window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080';
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    // Initialize Supabase client
+    const supabase = window.supabase.createClient(
+      window.APP_CONFIG.SUPABASE_URL,
+      window.APP_CONFIG.SUPABASE_ANON_KEY
+    );
+    window.API_BASE_URL = window.APP_CONFIG.API_BASE_URL;
+
+    // Check authentication
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (!session) {
+        // Not authenticated, redirect to login
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // Display user email
+      document.getElementById('userEmail').textContent = session.user.email || 'User';
+
+      // Store user info for compatibility
+      localStorage.setItem('user', JSON.stringify({
+        email: session.user.email,
+        id: session.user.id,
+      }));
+    });
+
+    // Logout function
+    async function logout() {
+      await supabase.auth.signOut();
+      localStorage.removeItem('user');
+      localStorage.removeItem('supabase_session');
+      window.location.href = 'index.html';
+    }
   </script>
 
   <script src="js/script.js"></script>
