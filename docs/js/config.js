@@ -5,10 +5,10 @@ window.APP_CONFIG = {
   // Supabase Configuration
   // Get these from: https://app.supabase.com/project/YOUR_PROJECT/settings/api
   SUPABASE_URL: 'https://epelybsicuwiircgcmqd.supabase.co',
-  SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY_HERE', // This is safe to expose (public key)
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwZWx5YnNpY3V3aWlyY2djbXFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NTQ3MTksImV4cCI6MjA3ODUzMDcxOX0.rS89-Y9NBlBL3f36IZJsFp9jWJCFygIUSAiRcTCGgpU', // This is safe to expose (public key)
 
   // API Gateway (for calendar operations, not auth)
-  API_BASE_URL: window.API_BASE_URL || 'http://localhost:8080',
+  API_BASE_URL: window.API_BASE_URL || 'https://c3mp3by0h5.execute-api.us-east-1.amazonaws.com/dev',
 };
 
 // Note: The SUPABASE_ANON_KEY is safe to expose in frontend code.
