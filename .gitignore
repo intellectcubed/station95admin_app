@@ -22,7 +22,6 @@ backend/.env
 
 # Python build artifacts
 build/
-dist/
 *.egg-info/
 
 # Cache or temp directories

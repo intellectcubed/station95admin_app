@@ -1,0 +1,164 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lambda functions for Station95 Admin backend
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+
+  SupabaseUrl:
+    Type: String
+    Description: Supabase project URL
+    NoEcho: true
+
+  SupabaseKey:
+    Type: String
+    Description: Supabase API key
+    NoEcho: true
+
+  CalendarServiceUrl:
+    Type: String
+    Description: Calendar service URL
+    Default: http://localhost:8000
+
+Resources:
+  # IAM Role for Lambda execution
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'station95-lambda-role-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  # Login Lambda Function
+  LoginFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'station95-login-${Environment}'
+      Runtime: python3.11
+      Handler: login_handler.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Code:
+        # NOTE: You'll need to package and upload your lambda/ directory
+        # Use `sam build` or `aws lambda update-function-code`
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': 'Placeholder - deploy actual code'}
+      Environment:
+        Variables:
+          SUPABASE_URL: !Ref SupabaseUrl
+          SUPABASE_KEY: !Ref SupabaseKey
+      Timeout: 30
+      MemorySize: 256
+
+  # Calendar Handler Lambda Function
+  CalendarFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'station95-calendar-${Environment}'
+      Runtime: python3.11
+      Handler: calendar_handler.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': 'Placeholder - deploy actual code'}
+      Environment:
+        Variables:
+          CALENDAR_URL: !Ref CalendarServiceUrl
+      Timeout: 30
+      MemorySize: 256
+
+  # API Proxy Lambda Function
+  ApiProxyFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'station95-api-proxy-${Environment}'
+      Runtime: python3.11
+      Handler: api_proxy_handler.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': 'Placeholder - deploy actual code'}
+      Environment:
+        Variables:
+          CALENDAR_URL: !Ref CalendarServiceUrl
+      Timeout: 30
+      MemorySize: 256
+
+  # Lambda permissions for API Gateway
+  LoginFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LoginFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+
+  CalendarFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref CalendarFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+
+  ApiProxyFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ApiProxyFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+
+Outputs:
+  LoginFunctionArn:
+    Description: Login Lambda function ARN
+    Value: !GetAtt LoginFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-LoginFunctionArn'
+
+  CalendarFunctionArn:
+    Description: Calendar Lambda function ARN
+    Value: !GetAtt CalendarFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-CalendarFunctionArn'
+
+  ApiProxyFunctionArn:
+    Description: API Proxy Lambda function ARN
+    Value: !GetAtt ApiProxyFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiProxyFunctionArn'
+
+  LambdaExecutionRoleArn:
+    Description: Lambda execution role ARN
+    Value: !GetAtt LambdaExecutionRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-LambdaRoleArn'

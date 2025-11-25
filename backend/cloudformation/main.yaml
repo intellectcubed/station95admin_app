@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Main CloudFormation stack for Station95 Admin application
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+
+  SupabaseUrl:
+    Type: String
+    Description: Supabase project URL
+    NoEcho: true
+
+  SupabaseKey:
+    Type: String
+    Description: Supabase API key
+    NoEcho: true
+
+  CalendarServiceUrl:
+    Type: String
+    Description: Calendar service URL
+    Default: http://localhost:8000
+
+Resources:
+  # S3 and CloudFront stack
+  FrontendStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./s3-cloudfront.yaml
+      Parameters:
+        Environment: !Ref Environment
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: Station95Admin
+
+  # Lambda functions stack
+  BackendStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./lambda-functions.yaml
+      Parameters:
+        Environment: !Ref Environment
+        SupabaseUrl: !Ref SupabaseUrl
+        SupabaseKey: !Ref SupabaseKey
+        CalendarServiceUrl: !Ref CalendarServiceUrl
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: Station95Admin
+
+  # API Gateway stack
+  ApiStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: BackendStack
+    Properties:
+      TemplateURL: ./api-gateway.yaml
+      Parameters:
+        Environment: !Ref Environment
+        LambdaStackName: !GetAtt BackendStack.Outputs.StackName
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: Station95Admin
+
+Outputs:
+  WebsiteURL:
+    Description: CloudFront website URL
+    Value: !GetAtt FrontendStack.Outputs.WebsiteURL
+
+  ApiEndpoint:
+    Description: API Gateway endpoint
+    Value: !GetAtt ApiStack.Outputs.ApiGatewayUrl
+
+  S3BucketName:
+    Description: S3 bucket for static files
+    Value: !GetAtt FrontendStack.Outputs.BucketName
+
+  CloudFrontDistributionId:
+    Description: CloudFront distribution ID (for cache invalidation)
+    Value: !GetAtt FrontendStack.Outputs.CloudFrontDistributionId

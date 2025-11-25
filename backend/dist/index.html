@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Squad Calendar Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="login-box">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <input type="email" id="email" name="email" placeholder="Email" required><br>
+      <input type="password" id="password" name="password" placeholder="Password" required><br>
+      <button type="submit">Login</button>
+    </form>
+    <p id="error" class="error" style="display: none;"></p>
+  </div>
+
+  <script>
+    // API Gateway endpoint - will be set via environment/config
+    const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080';
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('error');
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Store user info in localStorage
+          localStorage.setItem('user', JSON.stringify(data.user));
+          // Redirect to admin page
+          window.location.href = 'admin.html';
+        } else {
+          errorEl.textContent = data.detail || 'Login failed';
+          errorEl.style.display = 'block';
+        }
+      } catch (error) {
+        errorEl.textContent = 'Network error. Please try again.';
+        errorEl.style.display = 'block';
+      }
+    });
+
+    // Show error from URL parameter (for compatibility)
+    const urlParams = new URLSearchParams(window.location.search);
+    const errorParam = urlParams.get('error');
+    if (errorParam) {
+      document.getElementById('error').textContent = errorParam;
+      document.getElementById('error').style.display = 'block';
+    }
+  </script>
+</body>
+</html>

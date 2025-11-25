@@ -2,13 +2,13 @@
 <html>
 <head>
   <title>Squad Calendar Admin</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <link rel="stylesheet" href="/static/command_style.css">
-  <link rel="stylesheet" href="/static/territories.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/command_style.css">
+  <link rel="stylesheet" href="css/territories.css">
 
 </head>
 <body>
-  <h2>Welcome {{ user }}</h2>
+  <h2>Welcome <span id="userEmail">User</span></h2>
   <h3>Squad Calendar Administration</h3>
 
   <div class="date-section">
@@ -34,9 +34,9 @@
 
   <div class="territory-container">
     <h3>Territory Assignments</h3>
-    
+
     <div id="squadSections"></div>
-    
+
     <div class="legend">
       <div class="legend-item">
         <div class="legend-box primary"></div>
@@ -73,7 +73,7 @@
       <option value="43">43</option>
       <option value="54">54</option>
     </select>
-    
+
     <div class="time-selection">
       <label for="quickSelect">Quick Select:</label>
       <select id="quickSelect" onchange="onQuickSelectChange()">
@@ -85,18 +85,18 @@
         <option value="0600-1200">0600–1200</option>
         <option value="1200-1800">1200–1800</option>
       </select>
-      
+
       <label for="startTime">Start Time:</label>
       <select id="startTime" onchange="onManualChange()">
         <option value="">--</option>
       </select>
-      
+
       <label for="endTime">End Time:</label>
       <select id="endTime" onchange="onManualChange()">
         <option value="">--</option>
       </select>
     </div>
-    
+
     <button onclick="preview_button()">Preview Changes</button>
   </div>
 
@@ -108,7 +108,7 @@
       <input type="text" id="backupId" readonly>
       <button onclick="restore()">Restore</button>
     </div>
-    
+
     <table id="backupsTable">
       <thead>
         <tr>
@@ -124,8 +124,22 @@
     </table>
   </div>
 
-  <script src="/static/script.js"></script>
-  <script src="/static/territories.js"></script>
+  <script>
+    // Check if user is logged in
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!user) {
+      // Redirect to login if not authenticated
+      window.location.href = 'index.html';
+    } else {
+      // Display user email
+      document.getElementById('userEmail').textContent = user.email || 'User';
+    }
+
+    // Set API base URL for script.js to use
+    window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080';
+  </script>
+
+  <script src="js/script.js"></script>
+  <script src="js/territories.js"></script>
 </body>
 </html>
-
