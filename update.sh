@@ -52,8 +52,8 @@ if [ -n "$API_URL" ]; then
     echo "API Gateway URL: $API_URL"
     echo ""
     echo "To update static files on GitHub Pages:"
-    echo "  1. Make changes to dist/"
-    echo "  2. git add dist/ && git commit -m 'Update static files'"
+    echo "  1. Make changes to docs/"
+    echo "  2. git add docs/ && git commit -m 'Update static files'"
     echo "  3. git push origin main"
     echo "  (GitHub Pages will auto-deploy in ~1 minute)"
 fi
