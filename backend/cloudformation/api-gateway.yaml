@@ -155,7 +155,16 @@ Resources:
       - CalendarOptionsMethod
     Properties:
       RestApiId: !Ref ApiGateway
+      Description: !Sub 'Deployment ${AWS::StackName} at ${AWS::AccountId}'
+
+  # Stage (separate from deployment to allow updates)
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
       StageName: !Ref Environment
+      RestApiId: !Ref ApiGateway
+      DeploymentId: !Ref ApiDeployment
+      Description: !Sub '${Environment} stage'
 
 Outputs:
   ApiGatewayUrl:
