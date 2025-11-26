@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: API Gateway for Station95 Admin backend
+Description: API Gateway for Station95 Admin - Routes to single proxy Lambda
 
 Parameters:
   Environment:
@@ -22,33 +22,10 @@ Resources:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: !Sub 'station95-api-${Environment}'
-      Description: API Gateway for Station95 Admin backend
+      Description: API Gateway for Station95 Admin
       EndpointConfiguration:
         Types:
           - REGIONAL
-
-  # /login resource
-  LoginResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref ApiGateway
-      ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: login
-
-  LoginMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId: !Ref ApiGateway
-      ResourceId: !Ref LoginResource
-      HttpMethod: POST
-      AuthorizationType: NONE
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri: !Sub
-          - 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations'
-          - FunctionArn: !ImportValue
-              Fn::Sub: '${LambdaStackName}-LoginFunctionArn'
 
   # /api resource
   ApiResource:
@@ -58,7 +35,7 @@ Resources:
       ParentId: !GetAtt ApiGateway.RootResourceId
       PathPart: api
 
-  ApiMethod:
+  ApiGetMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref ApiGateway
@@ -72,6 +49,30 @@ Resources:
           - 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations'
           - FunctionArn: !ImportValue
               Fn::Sub: '${LambdaStackName}-ApiProxyFunctionArn'
+
+  ApiOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ApiResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
 
   # /calendar resource and nested paths
   CalendarResource:
@@ -102,7 +103,7 @@ Resources:
       ParentId: !Ref CalendarDateResource
       PathPart: '{action}'
 
-  CalendarMethod:
+  CalendarPostMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref ApiGateway
@@ -118,56 +119,7 @@ Resources:
         Uri: !Sub
           - 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations'
           - FunctionArn: !ImportValue
-              Fn::Sub: '${LambdaStackName}-CalendarFunctionArn'
-
-  # CORS configuration for all methods
-  LoginOptionsMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId: !Ref ApiGateway
-      ResourceId: !Ref LoginResource
-      HttpMethod: OPTIONS
-      AuthorizationType: NONE
-      Integration:
-        Type: MOCK
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: true
-            method.response.header.Access-Control-Allow-Methods: true
-            method.response.header.Access-Control-Allow-Origin: true
-
-  ApiOptionsMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId: !Ref ApiGateway
-      ResourceId: !Ref ApiResource
-      HttpMethod: OPTIONS
-      AuthorizationType: NONE
-      Integration:
-        Type: MOCK
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: true
-            method.response.header.Access-Control-Allow-Methods: true
-            method.response.header.Access-Control-Allow-Origin: true
+              Fn::Sub: '${LambdaStackName}-ApiProxyFunctionArn'
 
   CalendarOptionsMethod:
     Type: AWS::ApiGateway::Method
@@ -181,7 +133,7 @@ Resources:
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
               method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
               method.response.header.Access-Control-Allow-Origin: "'*'"
         RequestTemplates:
@@ -197,10 +149,8 @@ Resources:
   ApiDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
-      - LoginMethod
-      - ApiMethod
-      - CalendarMethod
-      - LoginOptionsMethod
+      - ApiGetMethod
+      - CalendarPostMethod
       - ApiOptionsMethod
       - CalendarOptionsMethod
     Properties:

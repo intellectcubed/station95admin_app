@@ -41,9 +41,8 @@ aws cloudformation create-stack \
   --template-body file://backend/cloudformation/lambda-functions.yaml \
   --parameters \
     ParameterKey=Environment,ParameterValue=${ENVIRONMENT} \
-    ParameterKey=SupabaseUrl,ParameterValue=${SUPABASE_URL} \
-    ParameterKey=SupabaseKey,ParameterValue=${SUPABASE_KEY} \
-    ParameterKey=CalendarServiceUrl,ParameterValue=${CALENDAR_URL:-http://localhost:8000} \
+    ParameterKey=CalendarApiUrl,ParameterValue=${CALENDAR_API_URL:-https://yw56b3bspc.execute-api.us-east-1.amazonaws.com/v1} \
+    ParameterKey=SecretsManagerSecretName,ParameterValue=${SECRET_NAME:-calendar-service-secrets-production} \
   --capabilities CAPABILITY_NAMED_IAM \
   --region ${REGION}
 
@@ -58,17 +57,14 @@ echo ""
 echo "Step 2/3: Deploying Lambda function code..."
 echo "----------------------------------------------"
 
-# Get function names and update code
-FUNCTIONS=("login" "calendar" "api-proxy")
-for func in "${FUNCTIONS[@]}"; do
-    FUNCTION_NAME="station95-${func}-${ENVIRONMENT}"
-    echo "Updating $FUNCTION_NAME..."
-    aws lambda update-function-code \
-      --function-name "$FUNCTION_NAME" \
-      --zip-file fileb://backend/lambda/lambda-package.zip \
-      --region ${REGION} \
-      > /dev/null
-done
+# Update api-proxy function code
+FUNCTION_NAME="station95-api-proxy-${ENVIRONMENT}"
+echo "Updating $FUNCTION_NAME..."
+aws lambda update-function-code \
+  --function-name "$FUNCTION_NAME" \
+  --zip-file fileb://backend/lambda/lambda-package.zip \
+  --region ${REGION} \
+  > /dev/null
 
 echo -e "${GREEN}✓ Lambda code deployed${NC}"
 
@@ -104,8 +100,9 @@ echo -e "${GREEN}Backend Deployment Complete!${NC}"
 echo "==============================================="
 echo ""
 echo "AWS Resources created:"
-echo "  • Lambda Functions: station95-{login,calendar,api-proxy}-${ENVIRONMENT}"
+echo "  • Lambda Function: station95-api-proxy-${ENVIRONMENT}"
 echo "  • API Gateway: $API_URL"
+echo "  • Secret: Using ${SECRET_NAME:-calendar-service-secrets-production}"
 echo ""
 echo "Next steps for GitHub Pages:"
 echo ""

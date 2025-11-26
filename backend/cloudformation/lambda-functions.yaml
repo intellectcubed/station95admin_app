@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Lambda functions for Station95 Admin backend
+Description: Single Lambda proxy for Station95 Admin - Routes to calendar-service-production
 
 Parameters:
   Environment:
@@ -11,20 +11,15 @@ Parameters:
       - prod
     Description: Environment name
 
-  SupabaseUrl:
+  CalendarApiUrl:
     Type: String
-    Description: Supabase project URL
-    NoEcho: true
+    Description: Calendar service API Gateway URL (IAM protected)
+    Default: https://yw56b3bspc.execute-api.us-east-1.amazonaws.com/v1
 
-  SupabaseKey:
+  SecretsManagerSecretName:
     Type: String
-    Description: Supabase API key
-    NoEcho: true
-
-  CalendarServiceUrl:
-    Type: String
-    Description: Calendar service URL
-    Default: http://localhost:8000
+    Description: Name of the Secrets Manager secret containing Supabase credentials
+    Default: calendar-service-secrets-production
 
 Resources:
   # IAM Role for Lambda execution
@@ -52,51 +47,24 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: '*'
+        - PolicyName: InvokeCalendarApi
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - execute-api:Invoke
+                Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:yw56b3bspc/*'
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${SecretsManagerSecretName}*'
 
-  # Login Lambda Function
-  LoginFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub 'station95-login-${Environment}'
-      Runtime: python3.11
-      Handler: login_handler.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Architectures:
-        - arm64
-      Code:
-        # NOTE: You'll need to package and upload your lambda/ directory
-        # Use `sam build` or `aws lambda update-function-code`
-        ZipFile: |
-          def lambda_handler(event, context):
-              return {'statusCode': 200, 'body': 'Placeholder - deploy actual code'}
-      Environment:
-        Variables:
-          SUPABASE_URL: !Ref SupabaseUrl
-          SUPABASE_KEY: !Ref SupabaseKey
-      Timeout: 30
-      MemorySize: 256
-
-  # Calendar Handler Lambda Function
-  CalendarFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub 'station95-calendar-${Environment}'
-      Runtime: python3.11
-      Handler: calendar_handler.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Architectures:
-        - arm64
-      Code:
-        ZipFile: |
-          def lambda_handler(event, context):
-              return {'statusCode': 200, 'body': 'Placeholder - deploy actual code'}
-      Environment:
-        Variables:
-          CALENDAR_URL: !Ref CalendarServiceUrl
-      Timeout: 30
-      MemorySize: 256
-
-  # API Proxy Lambda Function
+  # Single API Proxy Lambda Function
   ApiProxyFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -112,45 +80,21 @@ Resources:
               return {'statusCode': 200, 'body': 'Placeholder - deploy actual code'}
       Environment:
         Variables:
-          CALENDAR_URL: !Ref CalendarServiceUrl
+          CALENDAR_API_URL: !Ref CalendarApiUrl
+          SECRET_NAME: !Ref SecretsManagerSecretName
       Timeout: 30
       MemorySize: 256
 
-  # Lambda permissions for API Gateway
-  LoginFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref LoginFunction
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-
-  CalendarFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref CalendarFunction
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-
+  # Lambda permission for API Gateway
   ApiProxyFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref ApiProxyFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*'
 
 Outputs:
-  LoginFunctionArn:
-    Description: Login Lambda function ARN
-    Value: !GetAtt LoginFunction.Arn
-    Export:
-      Name: !Sub '${AWS::StackName}-LoginFunctionArn'
-
-  CalendarFunctionArn:
-    Description: Calendar Lambda function ARN
-    Value: !GetAtt CalendarFunction.Arn
-    Export:
-      Name: !Sub '${AWS::StackName}-CalendarFunctionArn'
-
   ApiProxyFunctionArn:
     Description: API Proxy Lambda function ARN
     Value: !GetAtt ApiProxyFunction.Arn
