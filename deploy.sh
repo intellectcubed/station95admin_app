@@ -36,12 +36,33 @@ echo ""
 echo "Step 1/3: Deploying Lambda functions stack..."
 echo "----------------------------------------------"
 
+# Lookup Calendar API Gateway URL if not provided
+if [ -z "$CALENDAR_API_URL" ]; then
+    echo "Looking up calendar service API Gateway..."
+    CALENDAR_API_ID=$(aws apigateway get-rest-apis \
+      --region ${REGION} \
+      --query "items[?name=='calendar-service-api-production'].id" \
+      --output text)
+
+    if [ -n "$CALENDAR_API_ID" ]; then
+        CALENDAR_API_URL="https://${CALENDAR_API_ID}.execute-api.${REGION}.amazonaws.com/v1"
+        echo "Found calendar API: $CALENDAR_API_URL (ID: $CALENDAR_API_ID)"
+    else
+        echo -e "${RED}Error: Calendar service API not found${NC}"
+        exit 1
+    fi
+else
+    # Extract API Gateway ID from URL if provided
+    CALENDAR_API_ID=$(echo "$CALENDAR_API_URL" | sed -n 's|https://\([^.]*\)\.execute-api\..*|\1|p')
+fi
+
 aws cloudformation create-stack \
   --stack-name "station95-lambda-${ENVIRONMENT}" \
   --template-body file://backend/cloudformation/lambda-functions.yaml \
   --parameters \
     ParameterKey=Environment,ParameterValue=${ENVIRONMENT} \
-    ParameterKey=CalendarApiUrl,ParameterValue=${CALENDAR_API_URL:-https://yw56b3bspc.execute-api.us-east-1.amazonaws.com/v1} \
+    ParameterKey=CalendarApiUrl,ParameterValue=${CALENDAR_API_URL} \
+    ParameterKey=CalendarApiGatewayId,ParameterValue=${CALENDAR_API_ID} \
     ParameterKey=SecretsManagerSecretName,ParameterValue=${SECRET_NAME:-calendar-service-secrets-production} \
   --capabilities CAPABILITY_NAMED_IAM \
   --region ${REGION}
