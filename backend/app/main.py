@@ -25,8 +25,17 @@ templates = Jinja2Templates(directory="app/templates")
 CALENDAR_URL = os.getenv("CALENDAR_URL", "http://localhost:8000")
 
 
-@app.get("/", response_class=HTMLResponse)
-async def login_page(request: Request):
+@app.get("/")
+async def root_handler(request: Request):
+    """Handle root path - serve login page or proxy API requests."""
+    # If there's an 'action' query param, proxy to calendar service
+    if request.query_params.get("action"):
+        async with httpx.AsyncClient() as client:
+            res = await client.get(CALENDAR_URL, params=request.query_params)
+        if "application/json" in res.headers.get("content-type", ""):
+            return JSONResponse(res.json())
+        return HTMLResponse(res.text)
+    # Otherwise, serve the login page
     return templates.TemplateResponse("login.html", {"request": request})
 
 
@@ -47,16 +56,6 @@ async def admin_page(request: Request):
     if not user:
         return RedirectResponse(url="/")
     return templates.TemplateResponse("admin.html", {"request": request, "user": user})
-
-
-@app.get("/api")
-async def api_proxy(request: Request):
-    """Proxy API requests to the calendar_commands service."""
-    async with httpx.AsyncClient() as client:
-        res = await client.get(CALENDAR_URL, params=request.query_params)
-    if "application/json" in res.headers.get("content-type", ""):
-        return JSONResponse(res.json())
-    return HTMLResponse(res.text)
 
 
 @app.post("/calendar/day/{date}/preview")

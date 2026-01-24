@@ -20,7 +20,7 @@ async function loadDate() {
 
   showLoading("Loading schedule...");
 
-  const res = await fetch(`/api?action=get_schedule_day&date=${date}`);
+  const res = await fetch(`/?action=get_schedule_day&date=${date}`);
   const json = await res.json();
 
   // Parse the day_schedule JSON string from the response
@@ -404,7 +404,7 @@ async function apply() {
 }
 
 async function loadBackups(date) {
-  const res = await fetch(`/api?action=list_backups&date=${date}`);
+  const res = await fetch(`/?action=list_backups&date=${date}`);
   const json = await res.json();
   
   const backupsBody = document.getElementById("backupsBody");
@@ -465,7 +465,7 @@ async function restore() {
   try {
     showLoading(`Restoring backup ${backupId}...`);
 
-    const url = `/api?action=rollback&date=${date}&change_id=${backupId}`;
+    const url = `/?action=rollback&date=${date}&change_id=${backupId}`;
     console.log("Restore URL:", url);
     const res = await fetch(url);
     const json = await res.json();
