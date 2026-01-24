@@ -8,7 +8,8 @@ window.APP_CONFIG = {
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwZWx5YnNpY3V3aWlyY2djbXFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NTQ3MTksImV4cCI6MjA3ODUzMDcxOX0.rS89-Y9NBlBL3f36IZJsFp9jWJCFygIUSAiRcTCGgpU', // This is safe to expose (public key)
 
   // API Gateway (for calendar operations, not auth)
-  API_BASE_URL: window.API_BASE_URL || 'https://kdbo4zp9u1.execute-api.us-east-1.amazonaws.com/prod',
+  // API_BASE_URL: window.API_BASE_URL || 'https://kdbo4zp9u1.execute-api.us-east-1.amazonaws.com/prod',
+  API_BASE_URL: window.API_BASE_URL || 'https://boating-camps-arms-postal.trycloudflare.com',
 };
 
 // Note: The SUPABASE_ANON_KEY is safe to expose in frontend code.
