@@ -9,7 +9,7 @@ window.APP_CONFIG = {
 
   // API Gateway (for calendar operations, not auth)
   // API_BASE_URL: window.API_BASE_URL || 'https://kdbo4zp9u1.execute-api.us-east-1.amazonaws.com/prod',
-  API_BASE_URL: window.API_BASE_URL || 'https://utilities-fiscal-generous-arrangement.trycloudflare.com',
+  API_BASE_URL: window.API_BASE_URL || 'https://coordinate-existed-banners-maiden.trycloudflare.com',
 };
 
 // Note: The SUPABASE_ANON_KEY is safe to expose in frontend code.
